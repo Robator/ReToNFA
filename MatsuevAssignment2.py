@@ -83,6 +83,10 @@ def kleene(a):
 	return result
 
 def or_selection(to, b):
+	print "----------OR_SEL-------------"
+	to.display()
+	b.display()
+
 	# additional vertexes
 	vertex_count = 2
 	result = NFA()
@@ -105,6 +109,9 @@ def or_selection(to, b):
 	result.set_transition(result.transitions[-1].vertex_to,to.get_vertex_count()+1,"^")
 	adder+=result.get_vertex_count()
 
+	result.display()
+
+	print "--------------ENDOR-----------------"
 	return result
 
 class ReToNFA(object):
@@ -112,11 +119,6 @@ class ReToNFA(object):
 	solutionTrace=[]
 	global_iter=-1
 	fSolutionFound=False
-	nfa=NFA()
-	# operators are: "(|"
-	# operators = []
-	# operands consist of small NFAs
-	operands = []
 	nfa=NFA()
 
 	def __init__(self, re):
@@ -219,7 +221,12 @@ class ReToNFA(object):
 	def parse_inside(self, counter_operands):
 		"""Function for parsing regular expression"""
 		operators=[]
+		operands=[]
+
 		while self.global_iter<len(self.re)-1:
+			for i in operands:
+				print operands.index(i)
+				i.display()
 			self.global_iter+=1
 			cur_sym=self.re[self.global_iter]
 
@@ -228,61 +235,56 @@ class ReToNFA(object):
 				tempnfa.set_vertex(2);
 				tempnfa.set_transition(0, 1, cur_sym)
 				tempnfa.set_final_state(1)
-				self.operands.append(tempnfa)
-				counter_operands+=1
+				operands.append(tempnfa)
 				# If there was three operands, two of them can be merged
-				if counter_operands==3 and not operators:
-					op3 = self.operands.pop()
-					op2,op1=self.take_two_top_operands()
-					self.operands.append(concat(op1, op2));
-					self.operands.append(op3);
-					counter_operands=2
-
-				if operators and operators[-1]=='|':
-					operators.pop()
-					op2,op1=self.take_two_top_operands()
-					self.operands.append(or_selection(op1,op2))
-					counter_operands-=1
+				if len(operands)==3 and not operators:
+					op3 = operands.pop()
+					op2,op1=self.take_two_top_operands(operands)
+					operands.append(concat(op1, op2));
+					operands.append(op3);
 				
 			else:
 				if(cur_sym == '*'):
-					star=self.operands.pop();
-					self.operands.append(kleene(star))
+					star=operands.pop();
+					operands.append(kleene(star))
 					
-				elif cur_sym == '|':
-					counter_operands+=1
-					self.parse_inside(0)
-					operators.append(cur_sym)
-
 				elif cur_sym == '(':
-					counter_operands+=1
-					hello
 					# Calling itself resetting counter of operands
-					self.parse_inside(0)
+					operands.append(self.parse_inside(0))
 
 				elif cur_sym in "\n)|":
+					print "operators:",operators
+
+					while len(operands)>=2:
+						op2,op1=self.take_two_top_operands(operands)
+						operands.append(concat(op1, op2));
+						print "merged:"
+						operands[-1].display()
+
+					if cur_sym == '|':
+						print "hello"
+						# counter_operands+=1
+						operators.append(cur_sym)
+						operands.append(self.parse_inside(0))
+						print "op:",operators
+						print "operands:"
+						for i in operands:
+							i.display()
+
 					# merging two operands by union
 					while operators and operators[-1]=='|':
+						print "| in operators"
 						operators.pop()
-						op2,op1=self.take_two_top_operands()
-						self.operands.append(or_selection(op1,op2))
-						counter_operands-=1
+						op2,op1=self.take_two_top_operands(operands)
+						operands.append(or_selection(op1,op2))
 
-					while counter_operands>=2:
-						op2,op1=self.take_two_top_operands()
-						self.operands.append(concat(op1, op2));
-						counter_operands-=1
+					return operands[-1]
 
-					if counter_operands<2:
-						return self.operands[-1]
-
-					else: return self.operands[-1]
-
-	def take_two_top_operands(self):
-		op2 = self.operands[-1]
-		self.operands.pop()
-		op1 = self.operands[-1]
-		self.operands.pop();
+	def take_two_top_operands(self,operands):
+		op2 = operands[-1]
+		operands.pop()
+		op1 = operands[-1]
+		operands.pop();
 		return op2,op1
 def testing():
 	with open("input.txt",'r') as infile:
