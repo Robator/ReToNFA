@@ -256,6 +256,7 @@ class ReToNFA(object):
 
 				elif cur_sym == '(':
 					counter_operands+=1
+					hello
 					# Calling itself resetting counter of operands
 					self.parse_inside(0)
 
